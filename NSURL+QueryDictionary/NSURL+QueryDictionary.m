@@ -8,27 +8,26 @@
 
 #import "NSURL+QueryDictionary.h"
 
-NSString *const uq_URLReservedChars     = @"￼=,!$&'()*+;@?\r\n\"<>#\t :/";
+NSString *const URLReservedChars     = @"￼=,!$&'()*+;@?\r\n\"<>#\t :/";
 static NSString *const kQuerySeparator  = @"&";
 static NSString *const kQueryDivider    = @"=";
 static NSString *const kQueryBegin      = @"?";
 static NSString *const kFragmentBegin   = @"#";
 
-@implementation NSURL (UQ_URLQuery)
+@implementation NSURL (AB_URLQuery)
 
-- (NSDictionary*) uq_queryDictionary {
-  return self.query.uq_URLQueryDictionary;
+- (NSDictionary *)queryDictionary {
+  return self.query.URLQueryDictionary;
 }
 
-- (NSURL*) uq_URLByAppendingQueryDictionary:(NSDictionary*) queryDictionary {
-  return [self uq_URLByAppendingQueryDictionary:queryDictionary withSortedKeys:NO];
+- (NSURL *)URLByAppendingQueryDictionary:(NSDictionary*) queryDictionary {
+  return [self URLByAppendingQueryDictionary:queryDictionary withSortedKeys:NO];
 }
 
-- (NSURL *)uq_URLByAppendingQueryDictionary:(NSDictionary *)queryDictionary
-                          withSortedKeys:(BOOL)sortedKeys
-{
+- (NSURL *)URLByAppendingQueryDictionary:(NSDictionary *)queryDictionary
+                          withSortedKeys:(BOOL)sortedKeys {
   NSMutableArray *queries = [self.query length] > 0 ? @[self.query].mutableCopy : @[].mutableCopy;
-  NSString *dictionaryQuery = [queryDictionary uq_URLQueryStringWithSortedKeys:sortedKeys];
+  NSString *dictionaryQuery = [queryDictionary URLQueryStringWithSortedKeys:sortedKeys];
   if (dictionaryQuery) {
     [queries addObject:dictionaryQuery];
   }
@@ -42,11 +41,23 @@ static NSString *const kFragmentBegin   = @"#";
                queryComponents[0],                      // existing url
                kQueryBegin,
                newQuery,
-               self.fragment.length ? kFragmentBegin : @"",
-               self.fragment.length ? self.fragment : @""]];
+               self.fragment ? kFragmentBegin : @"",
+               self.fragment ? self.fragment : @""]];
     }
   }
   return self;
+}
+
+- (NSURL *)URLByAppendingQueryValue:(NSObject *)value forKey:(NSString *)key {
+    NSString *newQuery = [@{key: value} URLQueryString];
+    NSArray *fragmentComponents = [self.absoluteString componentsSeparatedByString:kFragmentBegin];
+    return [NSURL URLWithString:
+            [NSString stringWithFormat:@"%@%@%@%@%@",
+             fragmentComponents[0],
+             self.query ? (self.query.length ? kQuerySeparator : @"") : kQueryBegin,
+             newQuery,
+             self.fragment ? kFragmentBegin : @"",
+             self.fragment ? self.fragment : @""]];
 }
 
 @end
@@ -55,7 +66,7 @@ static NSString *const kFragmentBegin   = @"#";
 
 @implementation NSString (URLQuery)
 
-- (NSDictionary*) uq_URLQueryDictionary {
+- (NSDictionary*) URLQueryDictionary {
   NSMutableDictionary *mute = @{}.mutableCopy;
   for (NSString *query in [self componentsSeparatedByString:kQuerySeparator]) {
     NSArray *components = [query componentsSeparatedByString:kQueryDivider];
@@ -88,13 +99,13 @@ static NSString *const kFragmentBegin   = @"#";
 
 @implementation NSDictionary (URLQuery)
 
-static inline NSString *uq_URLEscape(NSString *string);
+static inline NSString *URLEscape(NSString *string);
 
-- (NSString *)uq_URLQueryString {
-  return [self uq_URLQueryStringWithSortedKeys:NO];
+- (NSString *)URLQueryString {
+  return [self URLQueryStringWithSortedKeys:NO];
 }
 
-- (NSString*) uq_URLQueryStringWithSortedKeys:(BOOL)sortedKeys {
+- (NSString*) URLQueryStringWithSortedKeys:(BOOL)sortedKeys {
   NSMutableString *queryString = @"".mutableCopy;
   NSArray *keys = sortedKeys ? [self.allKeys sortedArrayUsingSelector:@selector(compare:)] : self.allKeys;
   for (NSString *key in keys) {
@@ -102,23 +113,23 @@ static inline NSString *uq_URLEscape(NSString *string);
     NSString *value = nil;
     // beware of empty or null
     if (!(rawValue == [NSNull null] || ![rawValue description].length)) {
-      value = uq_URLEscape([self[key] description]);
+      value = URLEscape([self[key] description]);
     }
     [queryString appendFormat:@"%@%@%@%@",
      queryString.length ? kQuerySeparator : @"",    // appending?
-     uq_URLEscape(key),
+     URLEscape(key),
      value ? kQueryDivider : @"",
      value ? value : @""];
   }
   return queryString.length ? queryString.copy : nil;
 }
 
-static inline NSString *uq_URLEscape(NSString *string) {
+static inline NSString *URLEscape(NSString *string) {
     return ((__bridge_transfer NSString *)CFURLCreateStringByAddingPercentEscapes(
         NULL,
         (__bridge CFStringRef)string,
         NULL,
-        (__bridge CFStringRef)uq_URLReservedChars,
+        (__bridge CFStringRef)URLReservedChars,
         kCFStringEncodingUTF8));
 }
 
